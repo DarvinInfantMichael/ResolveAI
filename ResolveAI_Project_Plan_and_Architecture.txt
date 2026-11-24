@@ -1,0 +1,365 @@
+PROJECT CONCEPT & INITIAL ARCHITECTURE
+======================================
+
+Working project name: ResolveAI
+Tagline: Report it. Understand it. Resolve it.
+
+1. THE PROJECT IDEA
+-------------------
+ResolveAI is an AI-assisted issue reporting, service-request, and workflow management
+platform for colleges, small businesses, offices, apartment communities, and other
+organizations.
+
+It solves a common real-world problem: people report problems through calls,
+WhatsApp messages, emails, or in person, but requests can get lost, duplicated,
+delayed, or forgotten. People also do not know who is handling the issue or when
+it will be resolved.
+
+ResolveAI gives every request one trackable place, helps staff understand and
+prioritize it, and gives administrators visibility into the complete process.
+
+Example:
+- A student reports: "The computer in Lab 2 is not starting."
+- The system creates a ticket and assigns a tracking number.
+- AI suggests the category "IT / Hardware", estimates priority from the
+  description and configured rules, and recommends relevant troubleshooting
+  steps.
+- An authorized staff member reviews the suggestion, accepts the request, and
+  updates its status.
+- The student receives status updates and can see the request history.
+- The administrator can monitor overdue requests and team workload.
+
+Important: AI suggestions should support people, not silently make sensitive
+decisions. Staff can review, correct, or reject AI classifications and actions.
+
+2. THE REAL-WORLD PROBLEM AND WHO BENEFITS
+-----------------------------------------
+Problems addressed:
+- Requests are scattered across different communication channels.
+- No clear owner is responsible for each issue.
+- People repeatedly ask for updates because progress is not visible.
+- Urgent issues may not be identified quickly.
+- Managers cannot easily measure response time, resolution time, or workload.
+- Teams repeatedly answer the same questions.
+
+Who benefits:
+- Requesters: submit a request and track its progress.
+- Support staff: receive organized requests and useful context.
+- Team leads: assign work and monitor pending or overdue requests.
+- Organization administrators: manage teams, access, categories, and reports.
+
+The platform can begin with one organization type and later support multiple
+organizations (multi-tenancy). For the first release, choose one pilot setting
+such as a college or a small office. Avoid trying to serve every industry at once.
+
+3. CORE FEATURES — FIRST RELEASE (MVP)
+--------------------------------------
+A. Authentication
+- Register, log in, and log out.
+- Secure password hashing.
+- Email verification and password reset.
+- Session/token lifecycle and logout handling.
+- Optional multi-factor authentication in a later release.
+
+B. Authorization and roles
+- Organization Owner: organization settings, users, and all records.
+- Admin: manages teams, categories, assignments, and reports.
+- Agent/Staff: views and handles requests assigned to their team or account.
+- Requester: creates requests and views only their own requests.
+- Enforce permissions on the backend for every protected operation.
+- The frontend may hide unavailable actions, but that is not security by itself.
+
+C. Request/ticket management
+- Create, view, edit, and track requests.
+- Categories, priority, status, attachments, comments, and activity history.
+- Assignment to a team or staff member.
+- Search, filters, pagination, and duplicate-request handling.
+- Status flow: New -> Acknowledged -> In Progress -> Resolved -> Closed.
+- Allow reopening according to organization policy.
+
+D. Notifications
+- In-app notifications for assignment and status changes.
+- Email notifications can be added after the core workflow works.
+- Keep notification delivery separate from the main request transaction.
+
+E. Dashboard and reports
+- Open, pending, resolved, and overdue request counts.
+- Team workload and request trends.
+- Response and resolution time metrics.
+- Role-specific dashboards.
+
+4. AI ASSISTANCE SYSTEM
+-----------------------
+AI should make the workflow easier without replacing human responsibility.
+
+MVP AI capabilities:
+- Categorize a request from its description.
+- Summarize long conversations and activity history.
+- Suggest priority using transparent rules plus AI context.
+- Recommend relevant knowledge-base articles or troubleshooting steps.
+- Draft a polite response for an agent to review.
+- Detect likely duplicate requests for human confirmation.
+
+AI safety and reliability:
+- Treat request text and uploaded content as untrusted input.
+- Do not let a user prompt override system instructions or access controls.
+- Never allow the AI model to decide whether a user is authorized.
+- Check permissions in the backend before retrieving data or performing actions.
+- Require human approval before consequential actions.
+- Record AI suggestions, model/version metadata, approvals, and outcomes.
+- Do not send secrets or unnecessary personal data to an AI provider.
+- Add rate limits, usage limits, and clear failure handling.
+- Start with AI suggestions; introduce AI-triggered actions only after testing.
+
+Future AI enhancements:
+- Retrieval-augmented generation (RAG) over approved organization documents.
+- Natural-language analytics, such as "Which category had the most overdue
+  requests this month?"
+- Guided self-service support.
+- Suggested assignment based on team skills and workload, subject to review.
+
+5. CLOUDFLARE IN THE PROJECT
+----------------------------
+Cloudflare can provide the edge security and delivery layer.
+
+Potential services:
+- Cloudflare DNS: manage the project's domain and DNS records.
+- Cloudflare WAF: help filter malicious web traffic.
+- Cloudflare Turnstile: bot protection for registration, login, and public forms.
+- Cloudflare CDN: cache suitable static assets and improve delivery.
+- Cloudflare R2: object storage for request attachments, with private access
+  and controlled, time-limited downloads.
+- Cloudflare Workers: optional edge functions or lightweight integrations.
+- Cloudflare Pages: optional frontend deployment, depending on the chosen stack.
+
+Security notes:
+- Cloudflare does not replace application authentication or authorization.
+- Validate Turnstile tokens on the server; never trust a browser-only result.
+- Keep database credentials, signing keys, and AI API keys in server-side secrets.
+- Apply upload size/type checks, malware-scanning strategy, and private bucket
+  access for attachments.
+- Configure cache rules carefully so private user data is never publicly cached.
+
+6. SUGGESTED TECHNOLOGY STACK
+-----------------------------
+Frontend:
+- React + Vite
+- JavaScript initially (TypeScript can be introduced when comfortable)
+- Tailwind CSS
+- React Router
+- A small API/state layer with clear loading and error handling
+
+Backend:
+- Node.js + Express.js
+- REST API
+- MVC-style organization with routes, controllers, services, middleware,
+  validators, and models/repositories
+- Background job processing for notifications and later automations
+
+Database:
+- MongoDB with Mongoose
+- Suggested main collections: Organizations, Users, Teams, Requests,
+  Comments, Attachments, Categories, Notifications, KnowledgeArticles,
+  AuditLogs, AutomationRules (future), AutomationRuns (future)
+
+AI layer:
+- A separate AI service/module called by the backend.
+- Provider-independent interface so the model provider can be changed later.
+- RAG/vector search can be added after the basic request workflow is stable.
+
+Infrastructure:
+- Cloudflare for DNS, WAF, Turnstile, CDN, and optionally R2/Workers.
+- Host the API and database on suitable managed services.
+- Use environment variables/secrets and separate development, staging,
+  and production environments.
+
+7. HIGH-LEVEL SYSTEM ARCHITECTURE
+---------------------------------
+
+Requester / Staff / Admin
+          |
+          v
+React Web Application
+          |
+          v
+Cloudflare Edge
+(DNS, WAF, Turnstile, CDN)
+          |
+          v
+Node.js + Express REST API
+          |
+          +--> Authentication Middleware
+          |
+          +--> Authorization / RBAC Middleware
+          |
+          +--> Request, User, Team and Admin Modules
+          |          |
+          |          v
+          |       MongoDB
+          |
+          +--> AI Assistance Module
+          |          |
+          |          v
+          |       AI Provider / RAG (later)
+          |
+          +--> File Service ------> Cloudflare R2 (private files)
+          |
+          +--> Notification Service
+                     |
+                     v
+                Email / In-app
+
+Background Worker (later)
+          |
+          +--> Scheduled checks
+          +--> SLA reminders
+          +--> Retry failed notifications
+          +--> Approved automation rules
+
+8. AUTHENTICATION AND AUTHORIZATION DESIGN
+------------------------------------------
+Authentication answers: "Who are you?"
+Authorization answers: "What are you allowed to do?"
+
+Suggested approach:
+- Hash passwords using a suitable password-hashing library.
+- Use secure, HTTP-only, Secure, SameSite cookies for browser sessions where
+  appropriate, with CSRF protection for cookie-authenticated state changes.
+- If using access and refresh tokens, define short access-token lifetime,
+  refresh-token rotation, revocation, and secure storage deliberately.
+- Validate identity on the server for every protected request.
+- Use role-based permissions, and add organization/resource ownership checks.
+- Scope every database query by organization and the user's allowed records.
+- Log important security and administrative actions.
+- Never rely on a role value supplied by the frontend.
+
+9. FUTURE AUTOMATION ENGINE
+---------------------------
+Design the system so automation can be added without rewriting the ticket
+management module.
+
+Possible automation structure:
+- Trigger: request created, status changed, priority changed, or scheduled time.
+- Conditions: category equals IT, priority is urgent, status remains open, etc.
+- Action: notify a team, assign a queue, send a reminder, or create a follow-up.
+- Approval: require a human for sensitive or high-impact actions.
+- Execution log: record what ran, when, why, and whether it succeeded.
+- Retry and failure handling: avoid duplicate actions using idempotency keys.
+
+Example future rule:
+IF a request is still unresolved 24 hours after creation
+AND its priority is High
+THEN notify the team lead and create an audit entry.
+
+Start with a few fixed, tested rules. Build a configurable rule editor only
+after the underlying trigger/action system is reliable.
+
+10. DEVELOPMENT PHASES
+----------------------
+Phase 0 — Planning (today)
+- Confirm the target users and first pilot organization type.
+- Confirm MVP scope, user roles, request lifecycle, and architecture.
+- Draw the database relationships and API route plan.
+- Decide hosting and Cloudflare services.
+
+Phase 1 — Foundation
+- Create frontend and backend projects.
+- Configure environment variables, database connection, error handling,
+  validation, logging, and a health-check endpoint.
+- Configure Git and a clean folder structure.
+
+Phase 2 — Identity and access
+- Registration, login, logout, password hashing, and protected routes.
+- Role/permission middleware and organization-level data isolation.
+- Test unauthorized and cross-organization access.
+
+Phase 3 — Core request workflow
+- Request CRUD, comments, assignment, status history, and attachments.
+- Search/filter and role-based dashboards.
+- Test the full requester-to-agent workflow.
+
+Phase 4 — Notifications and reporting
+- In-app notifications, email delivery, dashboards, and basic metrics.
+
+Phase 5 — AI assistance
+- Add classification, summaries, knowledge suggestions, and response drafts.
+- Add review/approval and AI audit records.
+
+Phase 6 — Cloudflare and deployment hardening
+- Configure DNS, WAF, Turnstile, CDN, and private R2 attachments as needed.
+- Add rate limiting, backups, monitoring, and deployment environments.
+- Test security and recovery procedures.
+
+Phase 7 — Automation
+- Add background jobs, triggers, conditions, actions, approvals, retries,
+  and execution logs.
+
+11. INITIAL API MODULES (DRAFT)
+-------------------------------
+/api/auth
+  POST   /register
+  POST   /login
+  POST   /logout
+  GET    /me
+
+/api/organizations
+  POST   /
+  GET    /current
+  PATCH  /current
+
+/api/users
+  GET    /
+  GET    /:id
+  PATCH  /:id
+  PATCH  /:id/role
+
+/api/requests
+  POST   /
+  GET    /
+  GET    /:id
+  PATCH  /:id
+  POST   /:id/comments
+  POST   /:id/assign
+  POST   /:id/status
+
+/api/ai
+  POST   /classify-request
+  POST   /summarize-request
+  POST   /suggest-response
+
+These are planning routes, not a final API contract. Every route must have
+authentication, authorization, validation, organization scoping, and suitable
+rate limits where applicable.
+
+12. KEY RISKS TO PLAN FOR
+-------------------------
+- Cross-organization data leaks: enforce organization scope in every query.
+- Broken access control: test permissions at API level, not just in the UI.
+- AI hallucinations: label suggestions and require review.
+- Prompt injection: treat user content as data, not trusted instructions.
+- File upload abuse: validate, restrict, store privately, and scan as appropriate.
+- Notification failures: use queues, retries, and delivery logs.
+- Automation loops: use idempotency, limits, and execution history.
+- Cost growth: monitor AI usage, storage, logs, and hosting costs.
+
+13. DECISIONS TO CONFIRM BEFORE CODING
+--------------------------------------
+1. First pilot audience: college, small office, apartment community, or another
+   specific organization?
+2. Project name: keep ResolveAI or choose another name?
+3. Stack: React + Tailwind + Node + Express + MongoDB?
+4. Authentication: cookie-based session or carefully managed access/refresh
+   token design?
+5. AI provider: choose after defining privacy, budget, and model requirements.
+6. Deployment: choose hosting after estimating expected traffic and budget.
+
+RECOMMENDED STARTING SCOPE
+--------------------------
+Build ResolveAI first as a multi-role issue/request management platform for
+ONE pilot organization type. Complete authentication, authorization, request
+tracking, assignment, status history, and dashboards before adding advanced AI
+or automation. Then add AI as a reviewed assistant, Cloudflare protections and
+storage, and finally the automation engine.
+
+The goal is a usable, secure product that solves one real problem well—not a
+large collection of unfinished features.
